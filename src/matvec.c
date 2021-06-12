@@ -59,7 +59,7 @@ mat4 mat_trans(mat4 m, vec3 v)
 
 mat4 mat_scale(mat4 m, vec3 v)
 {
-	mat4 s = mat_ident(0.0f);
+	mat4 s = mat_ident(1.0f);
 
 	for (int i = 0; i < 3; i++)
 		s.e[i][i] = v.e[i];

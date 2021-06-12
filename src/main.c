@@ -6,8 +6,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "globals.h"
 #include "shader.h"
 #include "matvec.h"
+#include "entity.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -15,11 +17,14 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void processInput(GLFWwindow *window);
 
+struct s_entity *entity = NULL;
+unsigned int entityc = 0;
+
 float ctime;
 float ptime;
 float dtime;
 
-vec3 cam_pos = {{0.0f, 3.0f, 0.0f}};
+vec3 cam_pos = {{0.0f, 0.0f, 0.0f}};
 vec3 cam_front = {{0.0f, 1.0f, 0.0f}};
 vec3 cam_up = {{0.0f, 0.0f, 1.0f}};
 float cam_pitch = 0.0f;
@@ -66,74 +71,6 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 
-	float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f
-};
-
-	unsigned int vao, vbo, ebo;
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
-	glGenBuffers(1, &ebo);
-
-	glBindVertexArray(vao);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-		GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-		GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
 	glUseProgram(shaderprog);
 
 	//Make textures
@@ -161,6 +98,7 @@ int main()
 		GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(data);
+
 
 
 	//TEST: Another texture
@@ -192,8 +130,8 @@ int main()
 	vec3 rotaxis = {{1.0f, 0.0f, 0.0f}};
 	mat4 ident = mat_ident(1.0f);
 	mat4 model = mat_rot(ident, 0.0f, rotaxis);
-	mat4 view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
-	mat4 proj = mat_proj(ident, 320.0f / 240.0f, 1.57, 1.0f, 1000.0f);
+	mat4 view = ident;
+	mat4 proj = mat_proj(ident, 320.0f / 240.0f, 1.57, 0.1f, 1000.0f);
 
 	unsigned int model_loc = glGetUniformLocation(shaderprog, "model");
 	glUniformMatrix4fv(model_loc, 1, GL_TRUE, (float *)model.e);
@@ -201,6 +139,14 @@ int main()
 	glUniformMatrix4fv(view_loc, 1, GL_TRUE, (float *)view.e);
 	unsigned int proj_loc = glGetUniformLocation(shaderprog, "proj");
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
+
+	int axeid = newentity("axe", 0, 0);
+	loadobj("res/axe.obj", axeid);
+	int cubeid = newentity("cube", 0, 0);
+	loadobj("res/cube.obj", cubeid);
+
+	entity[cubeid - 1].scale = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[cubeid - 1].pos = (vec3){{3.0f, 3.0f, 3.0f}};
 
 	//game loop
 	while (!glfwWindowShouldClose(window)) {
@@ -221,15 +167,32 @@ int main()
 		view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
 		glUniformMatrix4fv(view_loc, 1, GL_TRUE, (float *)view.e);
 
+		for (int i = 0; i < entityc; i++) {
+			glBindVertexArray(entity[i].vao);
+			model = mat_scale(ident, entity[i].scale);
+			model = mat_rot(model, entity[i].rot.e[0],
+				(vec3){{1.0f, 0.0f, 0.0f}});
+			model = mat_rot(model, entity[i].rot.e[1],
+				(vec3){{0.0f, 1.0f, 0.0f}});
+			model = mat_rot(model, entity[i].rot.e[2],
+				(vec3){{0.0f, 0.0f, 1.0f}});
+			model = mat_trans(model, entity[i].pos);
 
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+			glUniformMatrix4fv(model_loc, 1, GL_TRUE,
+				(float *)model.e);
+
+			glDrawElements(GL_TRIANGLES, entity[i].polyc * 3,
+				GL_UNSIGNED_INT, 0);
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	glDeleteVertexArrays(1, &vao);
-	glDeleteBuffers(1, &vbo);
+	//Nasty hack here to clear memory at end of program
+	glDeleteVertexArrays(1, &entity[0].vao);
+	glDeleteBuffers(1, &entity[0].vbo);
+	glDeleteBuffers(1, &entity[0].ebo);
 	glDeleteProgram(shaderprog);
 
 	glfwTerminate();

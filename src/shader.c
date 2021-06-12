@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -9,80 +10,63 @@
 
 
 unsigned int mkshader(char *vshader_path, char *fshader_path) {
-	int id;
-	int success;
-	char infolog[512] = {0};
+	char *vshader_src = calloc(4096, sizeof(char));
+	char *fshader_src = calloc(4096, sizeof(char));
 
-	//Open files
-	int vshader_fd = open(vshader_path, 0);
-	if (vshader_fd == -1) {
-		printf("ERROR: %s does not exist, can't read vertex shader.\n",
-			vshader_path);
-		return 0;
-	}
-	int fshader_fd = open(fshader_path, 0);
-	if (fshader_fd == -1) {
-		printf("ERROR: %s does not exist, can't read fragment "
-			"shader.\n", vshader_path);
+
+	FILE *vshader_file = fopen(vshader_path, "r");
+	if (vshader_file == NULL) {
+		perror("ERROR: opening vertex shader");
 		return 0;
 	}
 
-	//The following 2 blocks were a pain to stop compiler warnings.
-	//Read files
-	const char *vshader_src = calloc(2048, sizeof(char)); //The file could be big!
-	if (read(vshader_fd, (char *)vshader_src, 2047) == -1) {
-		printf("ERROR: %s does exist, but couldn't read\n",
-			vshader_path);
+	FILE *fshader_file = fopen(fshader_path, "r");
+	if (fshader_file == NULL) {
+		perror("ERROR: opening fragment shader");
 		return 0;
 	}
-	const char *fshader_src = calloc(2048, sizeof(char));
-	if (read(fshader_fd, (char *)fshader_src, 2047) == -1) {
-		printf("ERROR: %s does exist, but couldn't read\n",
-			fshader_path);
-		return 0;
-	}
+	fread(vshader_src, 1, 4096, vshader_file);
+	fread(fshader_src, 1, 4096, fshader_file);
 
-	//Compile shaders
+
 	unsigned int vshader, fshader;
 	vshader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vshader, 1, &vshader_src, NULL);
-	glCompileShader(vshader);
+	glShaderSource(vshader, 1, (const GLchar * const *)&vshader_src, NULL);
+	glCompileShader(vshader); // ^  ^  ^ because of compiler warnings
+	int success;
 	glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(vshader, 512, NULL, infolog);
-		printf("ERROR: GL: VSHADER: %s\n", infolog);
-		return 0;
-
-		glDeleteShader(vshader);
+	if (success != GL_TRUE) {
+		char infolog[1024];
+		int loglen = 0;
+		glGetShaderInfoLog(vshader, 1024, &loglen, infolog);
+		printf("ERROR: Vertex shader compilation:\n%s\n", infolog);
 	}
+
 	fshader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fshader, 1, &fshader_src, NULL);
+	glShaderSource(fshader, 1, (const GLchar * const *)&fshader_src, NULL);
 	glCompileShader(fshader);
-	glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(vshader, 512, NULL, infolog);
-		printf("ERROR: GL: FSHADER: %s", infolog);
+	glGetShaderiv(fshader, GL_COMPILE_STATUS, &success);
+	if (success != GL_TRUE) {
+		char infolog[1024];
+		int loglen = 0;
+		glGetShaderInfoLog(fshader, 1024, &loglen, infolog);
+		printf("ERROR: Fragment shader compilation:\n%s\n", infolog);
+	}
 
-		glDeleteShader(vshader);
-		glDeleteShader(fshader);
+
+	unsigned int progid = glCreateProgram();
+	glAttachShader(progid, vshader);
+	glAttachShader(progid, fshader);
+	glLinkProgram(progid);
+	glGetProgramiv(progid, GL_LINK_STATUS, &success);
+	if (success != GL_TRUE) {
+		char infolog[1024];
+		int loglen = 0;
+		glGetShaderInfoLog(fshader, 1024, &loglen, infolog);
+		printf("ERROR: Shader program linking:\n%s\n", infolog);
 		return 0;
 	}
 
-	id = glCreateProgram();
-	glAttachShader(id, vshader);
-	glAttachShader(id, fshader);
-	glLinkProgram(id);
-	glGetProgramiv(id, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(id, 512, NULL, infolog);
-		printf("ERROR: GL: PROGRAM: %s\n", infolog);
-		glDeleteShader(vshader);
-		glDeleteShader(fshader);
-		glDeleteProgram(id);
-		return 0;
-	}
-	glDeleteShader(vshader);
-	glDeleteShader(fshader);
+	return progid;
 
-	return id;
 }

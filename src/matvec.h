@@ -27,6 +27,12 @@ struct s_mat4 {
 };
 typedef struct s_mat4 mat4;
 
+
+struct s_vec2 {
+	float e[2];
+};
+typedef struct s_vec2 vec2;
+
 struct s_vec3 {
 	float e[3];
 };
@@ -36,6 +42,25 @@ struct s_vec4 {
 	float e[4];
 };
 typedef struct s_vec4 vec4;
+
+
+struct s_ivec2 {
+	int e[2];
+};
+typedef struct s_ivec2 ivec2;
+
+struct s_ivec3 {
+	int e[3];
+};
+typedef struct s_ivec3 ivec3;
+
+struct s_vertex {
+	vec3 pos;
+	vec3 col;
+	vec2 tex;
+};
+typedef struct s_vertex vertex;
+
 
 vec3 vec_add(vec3 a, vec3 b);
 vec3 vec_sub(vec3 a, vec3 b);
