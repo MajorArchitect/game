@@ -8,10 +8,13 @@
 #include "entity.h"
 #include "globals.h"
 
+//Increments every time a new id is allocated.
 int idcounter = 1;
 
+//Create a new entity, optionally with a particular ID.
 int newentity(char *name, int parentid, int id)
 {
+	//If a parent is wanted, get a pointer to that entity.
 	struct s_entity *parentptr = NULL;
 	if (parentid != 0) {
 		for (int i = 0; i < entityc; i++) {
@@ -26,16 +29,27 @@ int newentity(char *name, int parentid, int id)
 		}
 	}
 
+	//Reallocate space as nessecary.
 	if (entityc % 16 == 0) {
 		entity = realloc(entity, (entityc + 16) * sizeof(struct s_entity));
 	}
 
+	//If an id to use is specified, check its availability.
 	int newid = idcounter;
 	if (id != 0)
 		newid = id;
+		for (int i = 0; i < entityc; i++) {
+			if (entity[entityc].id == id) {
+				printf("ERROR: Entity with id %d already "
+					"exists, using the default id.\n", id);
+				newid = idcounter;
+				break;
+			}
+		}
 	else
 		idcounter++;
 
+	//Set up the new entity to be written.
 	entity[entityc] = (struct s_entity){
 		newid, //id
 		NULL, //vert
@@ -46,15 +60,16 @@ int newentity(char *name, int parentid, int id)
 		0, //vbo
 		0, //ebo,
 		0, //texture
-		(vec3){{0.0f, 0.0f, 0.0f}},
-		(vec3){{0.0f, 0.0f, 0.0f}},
-		(vec3){{1.0f, 1.0f, 1.0f}},
-		1.0f,
-		0,
-		NULL,
-		parentptr,
+		(vec3){{0.0f, 0.0f, 0.0f}}, //pos
+		(vec3){{0.0f, 0.0f, 0.0f}}, //rot
+		(vec3){{1.0f, 1.0f, 1.0f}}, //scl
+		1.0f, //alpha
+		0, //membs
+		NULL, //memb
+		parentptr, //parent
 
 	};
+	//set up GL for this object.
 	glGenVertexArrays(1, &entity[entityc].vao);
 	glGenBuffers(1, &entity[entityc].vbo);
 	glGenBuffers(1, &entity[entityc].ebo);
@@ -66,9 +81,12 @@ int newentity(char *name, int parentid, int id)
 
 	entityc++;
 
+	//Return the id of the entity created.
 	return entity[entityc - 1].id;
 }
 
+//Remove an entity from the array and optionally remove all its members
+//recursively.
 int rmentity(int id, int recur)
 {
 	//Find eid in the entity array
@@ -81,6 +99,7 @@ int rmentity(int id, int recur)
 	if (index == -1)
 		printf("ERROR: Can't remove entity %d, doesn't exist.", id);
 
+	//free the GL buffers, ready to be reallocated.
 	glDeleteVertexArrays(1, &entity[index].vao);
 	glDeleteBuffers(1, &entity[index].vbo);
 	glDeleteBuffers(1, &entity[index].ebo);
@@ -134,10 +153,11 @@ int rmentity(int id, int recur)
 		}
 	}
 
-	//In case you need it.
+	//return the id of the moved entity, in case you need it.
 	return entity[index].id;
 }
 
+//Read from a .obj file, put its vertex data into entity at id, and update GL.
 int loadobj(char *filepath, int id)
 {
 	//Open the file
@@ -165,7 +185,7 @@ int loadobj(char *filepath, int id)
 	int indexc = 0;
 	int *index = NULL;
 
-	int a = 0; //Don't worry about this.
+	int a = 0; //for fixng errors with goto.
 	//For every line in the file...
 	char line[81];
 	char *linecpy = malloc(81 * sizeof(char));
@@ -178,14 +198,12 @@ int loadobj(char *filepath, int id)
 		char *header = strtok(linecpy, " \n");
 		//and jump to different places based on what the line is.
 		if (!strcmp(header, "v"))
-			goto header_v;
+			goto header_v; //position vertex
 		else if (!strcmp(header, "vt"))
-			goto header_vt;
+			goto header_vt; //texture vertex
 		else if (!strcmp(header, "f"))
-			goto header_f;
-		else if (!strcmp(header, "@"))
-			break;
-		else
+			goto header_f; //face
+		else //anything else.
 			goto loop_end;
 
 

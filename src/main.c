@@ -141,9 +141,9 @@ int main()
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
 	int axeid = newentity("axe", 0, 0);
-	loadobj("res/axe.obj", axeid);
+	loadmod("res/axe.obj", axeid);
 	int cubeid = newentity("cube", 0, 0);
-	loadobj("res/cube.obj", cubeid);
+	loadmod("res/cube.obj", cubeid);
 
 	entity[cubeid - 1].scale = (vec3){{0.5f, 0.5f, 0.5f}};
 	entity[cubeid - 1].pos = (vec3){{3.0f, 3.0f, 3.0f}};
