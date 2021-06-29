@@ -107,12 +107,7 @@ int newentity(char *name, int parentid, int id)
 int rmentity(int id, int recur)
 {
 	//Find eid in the entity array
-	int index = -1;
-	for (int i = 0; i < entityc; i++) {
-		if (entity[i].id == id) {
-			index = i;
-		}
-	}
+	int index = getentindex(id);
 	if (index == -1)
 		printf("ERROR: Can't remove entity %d, doesn't exist.", id);
 
@@ -174,6 +169,19 @@ int rmentity(int id, int recur)
 	return entity[index].id;
 }
 
+int getentindex(int id)
+{
+	int index = -1;
+	for (int i = 0; i < entityc; i++) {
+		if (entity[i].id == id) {
+			index = i;
+			break;
+		}
+	}
+
+	return index;
+}
+
 //Read from a .obj file, put its vertex data into entity at id, and update GL.
 int loadmod(char *filepath, int id)
 {
@@ -189,61 +197,10 @@ int loadmod(char *filepath, int id)
 	char texpath[256];
 	sprintf(texpath, "%s/tex.png", filepath);
 
-	//Set up pointer for storing vertex data from file
-	int posvertc = 1; //This is the number of ((vertices PLUS 1)).
-	vec3 *posvert = NULL; //			       ^  ^ because .obj
-	//						starts from 1 not 0
 
-	//Pointer for texture vertices
-	int texvertc = 1; //This is the number of ((vertices PLUS 1)).
-	vec2 *texvert = NULL;
+	loadmesh(meshpath, id);
 
-	/* Pointer to pairs of position vertices, then texture vertices, in
-	 * that order. */
-	int vertc = 0; //This is the number of ((pairs PLUS 1) TIMES 5).
-	vertex *vert = NULL;
-
-	int indexc = 0;
-	int *index = NULL;
-
-
-	struct meshld_ret newmesh = readobj(meshfile);
-
-	vert = newmesh.vert;
-	index = newmesh.index;
-	vertc = newmesh.count.e[0];
-	indexc = newmesh.count.e[1];
-
-
-	//Find the entity to load
-	int entindex;
-	for (int i = 0; i < entityc; i++) {
-		if (entity[i].id == id) {
-			entindex = i;
-		}
-	}
-
-	if (entity[entindex].vert != NULL)
-		free(entity[entindex].vert);
-	if (entity[entindex].index != NULL)
-		free(entity[entindex].index);
-
-
-	entity[entindex].vert = (float *)vert;
-	entity[entindex].vertc = vertc;
-	entity[entindex].index = (int *)index;
-	entity[entindex].polyc = indexc / 3;
-
-	updatemesh(&entity[entindex]);
-
-	free(posvert);
-	free(texvert);
-	free(vert);
-	free(index);
-
-	fclose(meshfile);
-
-	settex(texpath, id);
+	loadtex(texpath, id);
 
 	return 0;
 }
@@ -273,15 +230,68 @@ int updatemesh(struct s_entity *ent)
 	return 0;
 }
 
-int settex(char *filepath, int id)
+int loadmesh(char *filepath, int id)
 {
-	int entindex = -1;
-	for (int i = 0; i < entityc; i++) {
-		if (entity[i].id == id) {
-			entindex = i;
-			break;
-		}
+	FILE *meshfile = fopen(filepath, "r");
+	if (filepath == NULL) {
+		printf("ERROR: Opening model at %s\n", filepath);
+		perror("");
+		return -1;
 	}
+
+	//Set up pointer for storing vertex data from file
+	int posvertc = 1; //This is the number of ((vertices PLUS 1)).
+	vec3 *posvert = NULL; //			       ^  ^ because .obj
+	//						starts from 1 not 0
+
+	//Pointer for texture vertices
+	int texvertc = 1; //This is the number of ((vertices PLUS 1)).
+	vec2 *texvert = NULL;
+
+	/* Pointer to pairs of position vertices, then texture vertices, in
+	 * that order. */
+	int vertc = 0; //This is the number of ((pairs PLUS 1) TIMES 5).
+	vertex *vert = NULL;
+
+	int indexc = 0;
+	int *index = NULL;
+
+
+	struct meshld_ret newmesh = readobj(meshfile);
+
+	vert = newmesh.vert;
+	index = newmesh.index;
+	vertc = newmesh.count.e[0];
+	indexc = newmesh.count.e[1];
+
+
+	//Find the entity to load
+	int entindex = getentindex(id);
+
+	if (entity[entindex].vert != NULL)
+		free(entity[entindex].vert);
+	if (entity[entindex].index != NULL)
+		free(entity[entindex].index);
+
+
+	entity[entindex].vert = (float *)vert;
+	entity[entindex].vertc = vertc;
+	entity[entindex].index = (int *)index;
+	entity[entindex].polyc = indexc / 3;
+
+	updatemesh(&entity[entindex]);
+
+	free(posvert);
+	free(texvert);
+	free(vert);
+	free(index);
+
+	fclose(meshfile);
+}
+
+int loadtex(char *filepath, int id)
+{
+	int entindex = getentindex(id);
 	if (entindex == -1) {
 		printf("ERROR: Entity %d doesn't exist, can't change texture\n", id);
 		return -1;

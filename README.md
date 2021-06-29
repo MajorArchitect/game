@@ -12,7 +12,7 @@ around easily, but also be powerful enough to make a real game with.
 
 ### Planned
 - As cross-platform as possible! It currently only works on Linux (maybe just
-	my version of Ubuntu!) But any decision i will make about adding
+	my version of Ubuntu!) But any decision I will make about adding
 	external stuff will be made with consideration of how easy it will be
 	to port.
 - A special entity that acts as the world/map, that can be changed frequently

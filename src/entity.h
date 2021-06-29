@@ -30,13 +30,18 @@ int newentity(char *name, int parentid, int id);
 //recursively.
 int rmentity(int id, int recur);
 
+int getentindex(int id);
+
 //Read from a .obj file, put its vertex data into entity at id, and update GL.
 int loadmod(char *filepath, int id);
 
 //Update the entity's GL buffers with whatever is in the mesh pointer.
 int updatemesh(struct s_entity *ent);
 
+//Read a .obj file and load that mesh into an entity.
+int loadmesh(char *filepath, int id);
+
 //Set the texture of the object id to an image in some file at filepath.
-int settex(char *filepath, int id);
+int loadtex(char *filepath, int id);
 
 #endif //OBJECT_H
