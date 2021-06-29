@@ -1,8 +1,8 @@
 # Game Engine
 This is a game engine written in C with OpenGL. I intend to cover at least the
 most essential features of a game engine, and then use it challenge myself and
-write a game. I hope it will be intuitive enough to get your head around
-easily, but also be powerful enough to make a real game with.
+write a game. I hope it will be intuitive and basic enough to get your head
+around easily, but also be powerful enough to make a real game with.
 
 ## Features
 ### Current
