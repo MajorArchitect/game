@@ -73,58 +73,7 @@ int main()
 
 	glUseProgram(shaderprog);
 
-	//Make textures
-	unsigned int tex1, tex2;
-	//Texture 1
-	glGenTextures(1, &tex1);
-	glBindTexture(GL_TEXTURE_2D, tex1);
-	//Set its parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	//Read the file
-	int tex_width, tex_height, tex_chans;
-	stbi_set_flip_vertically_on_load(1);
-	//fileread function
-	unsigned char *data = stbi_load("res/brick.png", &tex_width,
-		&tex_height, &tex_chans, 0);
-	if (data == NULL) {
-		printf("image data is NULL\n");
-		return -1;
-	}
-	//Set its data
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0,
-		GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(data);
-
-
-
-	//TEST: Another texture
-	glGenTextures(1, &tex2);
-	glBindTexture(GL_TEXTURE_2D, tex2);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	data = stbi_load("res/face.jpg", &tex_width, &tex_height, &tex_chans, 0);
-	if (data)
-	{
-		// note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		printf("Failed to load texture");
-	}
-	stbi_image_free(data);
 	glUniform1i(glGetUniformLocation(shaderprog, "tex_sam1"), 0);
-	glUniform1i(glGetUniformLocation(shaderprog, "tex_sam2"), 1);
 
 
 	vec3 rotaxis = {{1.0f, 0.0f, 0.0f}};
@@ -141,12 +90,12 @@ int main()
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
 	int axeid = newentity("axe", 0, 0);
-	loadmod("res/axe.obj", axeid);
+	loadmod("res/mod/axes.mod", axeid);
 	int cubeid = newentity("cube", 0, 0);
-	loadmod("res/cube.obj", cubeid);
+	loadmod("res/mod/cube.mod", cubeid);
 
-	entity[cubeid - 1].scale = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[cubeid - 1].pos = (vec3){{3.0f, 3.0f, 3.0f}};
+	entity[cubeid - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[cubeid - 1].pos = (vec3){{2.0f, 3.0f, 4.0f}};
 
 	//game loop
 	while (!glfwWindowShouldClose(window)) {
@@ -158,10 +107,10 @@ int main()
 		glClearColor(0.529f, 0.808f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
+		/*glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, tex1);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, tex2);
+		glBindTexture(GL_TEXTURE_2D, tex2);*/
 		glUseProgram(shaderprog);
 
 		view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
@@ -169,7 +118,7 @@ int main()
 
 		for (int i = 0; i < entityc; i++) {
 			glBindVertexArray(entity[i].vao);
-			model = mat_scale(ident, entity[i].scale);
+			model = mat_scale(ident, entity[i].scl);
 			model = mat_rot(model, entity[i].rot.e[0],
 				(vec3){{1.0f, 0.0f, 0.0f}});
 			model = mat_rot(model, entity[i].rot.e[1],
@@ -180,6 +129,9 @@ int main()
 
 			glUniformMatrix4fv(model_loc, 1, GL_TRUE,
 				(float *)model.e);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, entity[i].tex);
 
 			glDrawElements(GL_TRIANGLES, entity[i].polyc * 3,
 				GL_UNSIGNED_INT, 0);
@@ -209,6 +161,7 @@ float last_xpos = 160, last_ypos = 120;
 int firstmouse = 1;
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
+	xpos = -xpos;
 	if(firstmouse) {
 		last_xpos = xpos;
 		last_ypos = ypos;
@@ -232,7 +185,7 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 		cam_pitch = -1.5f;
 
 	vec3 dir = {{cos(cam_yaw) * cos(cam_pitch),
-		-sin(cam_yaw) * cos(cam_pitch),
+		sin(cam_yaw) * cos(cam_pitch),
 		sin(cam_pitch)}};
 	cam_front = vec_norm(dir);
 

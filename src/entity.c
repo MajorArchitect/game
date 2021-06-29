@@ -2,14 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "stb_image.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include "entity.h"
 #include "globals.h"
+#include "matvec.h"
+
+
 
 //Increments every time a new id is allocated.
 int idcounter = 1;
+
+//Mesh loading return struct.
+struct meshld_ret {
+	vertex *vert;
+	unsigned int *index;
+	ivec2 count; //count[0] is vertex count and count[1] is index count.
+};
+
+//LOCAL FUNCTION DECLARATIONS
+/* Reads objfile in .obj format and writes the vertices and indices back.
+ * returns the count of vertices and indices in the ivec2, in that order. */
+struct meshld_ret readobj(FILE *objfile);
 
 //Create a new entity, optionally with a particular ID.
 int newentity(char *name, int parentid, int id)
@@ -36,7 +53,7 @@ int newentity(char *name, int parentid, int id)
 
 	//If an id to use is specified, check its availability.
 	int newid = idcounter;
-	if (id != 0)
+	if (id != 0) {
 		newid = id;
 		for (int i = 0; i < entityc; i++) {
 			if (entity[entityc].id == id) {
@@ -46,7 +63,7 @@ int newentity(char *name, int parentid, int id)
 				break;
 			}
 		}
-	else
+	} else
 		idcounter++;
 
 	//Set up the new entity to be written.
@@ -158,15 +175,19 @@ int rmentity(int id, int recur)
 }
 
 //Read from a .obj file, put its vertex data into entity at id, and update GL.
-int loadobj(char *filepath, int id)
+int loadmod(char *filepath, int id)
 {
 	//Open the file
-	FILE *modelfile = fopen(filepath, "r");
-	if (modelfile == NULL) {
-		printf("ERROR: Opening model at %s", filepath);
+	char meshpath[256];
+	sprintf(meshpath, "%s/mesh.obj", filepath);
+	FILE *meshfile = fopen(meshpath, "r");
+	if (meshfile == NULL) {
+		printf("ERROR: Opening model at %s\n", meshpath);
 		perror("");
 		return -1;
 	}
+	char texpath[256];
+	sprintf(texpath, "%s/tex.png", filepath);
 
 	//Set up pointer for storing vertex data from file
 	int posvertc = 1; //This is the number of ((vertices PLUS 1)).
@@ -185,11 +206,145 @@ int loadobj(char *filepath, int id)
 	int indexc = 0;
 	int *index = NULL;
 
+
+	struct meshld_ret newmesh = readobj(meshfile);
+
+	vert = newmesh.vert;
+	index = newmesh.index;
+	vertc = newmesh.count.e[0];
+	indexc = newmesh.count.e[1];
+
+
+	//Find the entity to load
+	int entindex;
+	for (int i = 0; i < entityc; i++) {
+		if (entity[i].id == id) {
+			entindex = i;
+		}
+	}
+
+	if (entity[entindex].vert != NULL)
+		free(entity[entindex].vert);
+	if (entity[entindex].index != NULL)
+		free(entity[entindex].index);
+
+
+	entity[entindex].vert = (float *)vert;
+	entity[entindex].vertc = vertc;
+	entity[entindex].index = (int *)index;
+	entity[entindex].polyc = indexc / 3;
+
+	updatemesh(&entity[entindex]);
+
+	free(posvert);
+	free(texvert);
+	free(vert);
+	free(index);
+
+	fclose(meshfile);
+
+	settex(texpath, id);
+
+	return 0;
+}
+
+//Look at the buffer handles in ent and update them in GL
+int updatemesh(struct s_entity *ent)
+{
+	glBindVertexArray(ent->vao);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8 *
+		ent->vertc, ent->vert, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) *
+		ent->polyc * 3, ent->index,
+		GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+		(void *)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+		(void *)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+		(void *)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindVertexArray(0);
+
+	return 0;
+}
+
+int settex(char *filepath, int id)
+{
+	int entindex = -1;
+	for (int i = 0; i < entityc; i++) {
+		if (entity[i].id == id) {
+			entindex = i;
+			break;
+		}
+	}
+	if (entindex == -1) {
+		printf("ERROR: Entity %d doesn't exist, can't change texture\n", id);
+		return -1;
+	}
+	//create a texture object
+	glGenTextures(1, &entity[entindex].tex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, entity[entindex].tex);
+	//Set its parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//Read the file
+	int tex_width, tex_height, tex_chans;
+	stbi_set_flip_vertically_on_load(1);
+	//fileread function
+	unsigned char *data = stbi_load(filepath, &tex_width, &tex_height,
+		&tex_chans, 0);
+	if (data == NULL) {
+		printf("image data is NULL\n");
+		return -2;
+	}
+	//Set its data, depending on the depth of the pixels
+	if (tex_chans == 3)
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0,
+		GL_RGB, GL_UNSIGNED_BYTE, data);
+	else
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(data);
+
+	return entity[entindex].tex;
+}
+
+
+
+//LOCAL FUNCTION DEFINITIONS
+/* Reads objfile in .obj format and writes the vertices and indices back.
+ * returns the count of vertices and indices in the ivec2, in that order. */
+struct meshld_ret readobj(FILE *objfile)
+{
+	//Set up pointer for storing vertex data from file
+	int posvertc = 1; //This is the number of ((vertices PLUS 1)).
+	vec3 *posvert = NULL; //			       ^  ^ because .obj
+	//						starts from 1 not 0
+
+	//Pointer for texture vertices
+	int texvertc = 1; //This is the number of ((vertices PLUS 1)).
+	vec2 *texvert = NULL;
+
+	vertex *vert = NULL;
+	int *index = NULL;
+
+	int vertc = 0;
+	int indexc = 0;
+
 	int a = 0; //for fixng errors with goto.
 	//For every line in the file...
 	char line[81];
 	char *linecpy = malloc(81 * sizeof(char));
-	while (fgets(line, 81, modelfile)) {
+	while (fgets(line, 81, objfile)) {
 
 		//Make a copy of that string because strtok will modify it.
 		strcpy(linecpy, line);
@@ -285,7 +440,9 @@ int loadobj(char *filepath, int id)
 						vert[i].tex.e[1] ==
 						newvertex.tex.e[1]) {
 						//add more space
-						index = reallocarray(index, indexc + 1, sizeof(int));
+						index = reallocarray(index,
+							indexc + 1,
+							sizeof(int));
 							index[indexc] = i;
 							indexc += 1;
 						}
@@ -308,13 +465,9 @@ int loadobj(char *filepath, int id)
 	 * individually. */
 				}
 				if (indexc == oldindexc) {
-					vert = reallocarray(vert,
-						vertc + 1,
-						sizeof(vertex));
+					vert = reallocarray(vert, vertc + 1, sizeof(vertex));
 					vert[vertc] = newvertex;
-					index = reallocarray(index,
-						indexc + 1,
-						sizeof(int));
+					index = realloc(index, (indexc + 1) * sizeof(int));
 					index[indexc] = vertc;
 					vertc += 1;
 					indexc += 1;
@@ -328,50 +481,5 @@ int loadobj(char *filepath, int id)
 
 
 	}
-
-	int entindex;
-	for (int i = 0; i < entityc; i++) {
-		if (entity[i].id == id) {
-			entindex = i;
-		}
-	}
-
-	if (entity[entindex].vert != NULL)
-		free(entity[entindex].vert);
-	if (entity[entindex].index != NULL)
-		free(entity[entindex].index);
-
-
-	entity[entindex].vert = (float *)vert;
-	entity[entindex].vertc = vertc;
-	entity[entindex].index = (int *)index;
-	entity[entindex].polyc = indexc / 3;
-
-
-	glBindVertexArray(entity[entindex].vao);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8 *
-		entity[entindex].vertc, entity[entindex].vert, GL_STATIC_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) *
-		entity[entindex].polyc * 3, entity[entindex].index,
-		GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-		(void *)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	glBindVertexArray(0);
-
-	free(posvert);
-	free(texvert);
-	free(vert);
-	free(index);
-
-
-	return 0;
+	return (struct meshld_ret){vert, index, {{vertc, indexc}}};
 }
