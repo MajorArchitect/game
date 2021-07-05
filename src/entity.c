@@ -34,7 +34,7 @@ int newentity(char *name, int parentid, int id)
 	//If a parent is wanted, get a pointer to that entity.
 	struct s_entity *parentptr = NULL;
 	if (parentid != 0) {
-		for (int i = 0; i < entityc; i++) {
+		for (int i = 0; i < entity_c; i++) {
 			if (entity[i].id == parentid) {
 				parentptr = &entity[i];
 				break;
@@ -47,16 +47,16 @@ int newentity(char *name, int parentid, int id)
 	}
 
 	//Reallocate space as nessecary.
-	if (entityc % 16 == 0) {
-		entity = realloc(entity, (entityc + 16) * sizeof(struct s_entity));
+	if (entity_c % 16 == 0) {
+		entity = realloc(entity, (entity_c + 16) * sizeof(struct s_entity));
 	}
 
 	//If an id to use is specified, check its availability.
 	int newid = idcounter;
 	if (id != 0) {
 		newid = id;
-		for (int i = 0; i < entityc; i++) {
-			if (entity[entityc].id == id) {
+		for (int i = 0; i < entity_c; i++) {
+			if (entity[entity_c].id == id) {
 				printf("ERROR: Entity with id %d already "
 					"exists, using the default id.\n", id);
 				newid = idcounter;
@@ -67,8 +67,9 @@ int newentity(char *name, int parentid, int id)
 		idcounter++;
 
 	//Set up the new entity to be written.
-	entity[entityc] = (struct s_entity){
+	entity[entity_c] = (struct s_entity){
 		newid, //id
+		0, //mode
 		NULL, //vert
 		0, //vertc
 		NULL, //index
@@ -80,6 +81,8 @@ int newentity(char *name, int parentid, int id)
 		(vec3){{0.0f, 0.0f, 0.0f}}, //pos
 		(vec3){{0.0f, 0.0f, 0.0f}}, //rot
 		(vec3){{1.0f, 1.0f, 1.0f}}, //scl
+		(vec3){{0.0f, 0.0f, 0.0f}}, //vel
+		(vec3){{0.0f, 0.0f, 0.0f}}, //acc
 		1.0f, //alpha
 		0, //membs
 		NULL, //memb
@@ -87,19 +90,19 @@ int newentity(char *name, int parentid, int id)
 
 	};
 	//set up GL for this object.
-	glGenVertexArrays(1, &entity[entityc].vao);
-	glGenBuffers(1, &entity[entityc].vbo);
-	glGenBuffers(1, &entity[entityc].ebo);
+	glGenVertexArrays(1, &entity[entity_c].vao);
+	glGenBuffers(1, &entity[entity_c].vbo);
+	glGenBuffers(1, &entity[entity_c].ebo);
 
-	glBindVertexArray(entity[entityc].vao);
-	glBindBuffer(GL_ARRAY_BUFFER, entity[entityc].vbo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity[entityc].ebo);
+	glBindVertexArray(entity[entity_c].vao);
+	glBindBuffer(GL_ARRAY_BUFFER, entity[entity_c].vbo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity[entity_c].ebo);
 	glBindVertexArray(0);
 
-	entityc++;
+	entity_c++;
 
 	//Return the id of the entity created.
-	return entity[entityc - 1].id;
+	return entity[entity_c - 1].id;
 }
 
 //Remove an entity from the array and optionally remove all its members
@@ -116,7 +119,7 @@ int rmentity(int id, int recur)
 	glDeleteBuffers(1, &entity[index].vbo);
 	glDeleteBuffers(1, &entity[index].ebo);
 
-	entityc--;
+	entity_c--;
 
 	//If you want to recursively delete the members of this object too...
 	if (recur) {
@@ -148,7 +151,7 @@ int rmentity(int id, int recur)
 	}
 
 	//Copy the last entity into the spot where this one was...
-	entity[index] = entity[entityc];
+	entity[index] = entity[entity_c];
 	//...and fix the references to it in other objects
 	for (int i = 0; i < entity[index].membs; i++) {
 		struct s_entity *member = entity[index].memb[i];
@@ -172,7 +175,7 @@ int rmentity(int id, int recur)
 int getentindex(int id)
 {
 	int index = -1;
-	for (int i = 0; i < entityc; i++) {
+	for (int i = 0; i < entity_c; i++) {
 		if (entity[i].id == id) {
 			index = i;
 			break;

@@ -5,19 +5,32 @@
 
 //This holds data for entities.
 struct s_entity {
-	int id; //Unique object id, independent of array position
+	int id; //Unique object id, independent of array position.
+
+	//Byte for bitmasking the entity's modes.
+	char mode;
+	//Bit 0: ENT_DOESPHYSICS - controls whether entity is affected by
+		//dophysics.
+
 	float *vert; //GL vertex buffer data
 	int vertc;
 	unsigned int *index; //Vertex index data
 	int polyc; //Number of triangles. also number of (indices / 3)
+
 	unsigned int vao; //GL Vertex Array Object handle
 	unsigned int vbo; //GL Vertex Buffer Object handle
 	unsigned int ebo; //GL Element Buffer Object handle
 	unsigned int tex;
+
 	vec3 pos; //Position relative to parent
 	vec3 rot; //Rotation relative to parent
 	vec3 scl; //Scale relative to parent
+
+	vec3 vel; //Velocity vector
+	vec3 acc; //Acceleration vector
+
 	float alpha; //How transparent the object is (1 is no fade)
+
 	int membs; //Number of members in this entity
 	struct s_entity **memb; //Pointer to array of pointers to members
 	struct s_entity *parent; //Pointer to single parent,
@@ -26,6 +39,7 @@ struct s_entity {
 
 //Create a new entity, optionally with a particular ID.
 int newentity(char *name, int parentid, int id);
+
 //Remove an entity from the array and optionally remove all its members
 //recursively.
 int rmentity(int id, int recur);

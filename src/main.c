@@ -10,6 +10,7 @@
 #include "shader.h"
 #include "matvec.h"
 #include "entity.h"
+#include "physics.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -18,7 +19,7 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void processInput(GLFWwindow *window);
 
 struct s_entity *entity = NULL;
-unsigned int entityc = 0;
+unsigned int entity_c = 0;
 
 float ctime;
 float ptime;
@@ -89,13 +90,41 @@ int main()
 	unsigned int proj_loc = glGetUniformLocation(shaderprog, "proj");
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
+	int worldid = newentity("world", 0, 0);
+	loadmod("res/mod/world.mod", worldid);
+
 	int axeid = newentity("axe", 0, 0);
 	loadmod("res/mod/axes.mod", axeid);
 	int cubeid = newentity("cube", 0, 0);
 	loadmod("res/mod/cube.mod", cubeid);
 
+	int vel1id = newentity("1ms", 0, 0);
+	loadmod("res/mod/1ms.mod", vel1id);
+	int vel2id = newentity("2ms", 0, 0);
+	loadmod("res/mod/2ms.mod", vel2id);
+	int acc05id = newentity("0.5mss", 0, 0);
+	loadmod("res/mod/05mss.mod", acc05id);
+	int acc1id = newentity("1mss", 0, 0);
+	loadmod("res/mod/1mss.mod", acc1id);
+
 	entity[cubeid - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
 	entity[cubeid - 1].pos = (vec3){{2.0f, 3.0f, 4.0f}};
+
+	entity[vel1id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[vel1id - 1].pos = (vec3){{3.0f, 3.0f, 1.0f}};
+	entity[vel1id - 1].vel = (vec3){{1.0f, 0.0f, 0.0f}};
+
+	entity[vel2id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[vel2id - 1].pos = (vec3){{3.0f, 2.0f, 1.0f}};
+	entity[vel2id - 1].vel = (vec3){{2.0f, 0.0f, 0.0f}};
+
+	entity[acc05id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[acc05id - 1].pos = (vec3){{3.0f, 4.0f, 1.0f}};
+	entity[acc05id - 1].acc = (vec3){{0.5f, 0.0f, 0.0f}};
+
+	entity[acc1id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
+	entity[acc1id - 1].pos = (vec3){{3.0f, 5.0f, 1.0f}};
+	entity[acc1id - 1].acc = (vec3){{1.0f, 0.0f, 0.0f}};
 
 	//game loop
 	while (!glfwWindowShouldClose(window)) {
@@ -113,7 +142,7 @@ int main()
 		view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
 		glUniformMatrix4fv(view_loc, 1, GL_TRUE, (float *)view.e);
 
-		for (int i = 0; i < entityc; i++) {
+		for (int i = 0; i < entity_c; i++) {
 			glBindVertexArray(entity[i].vao);
 			model = mat_scale(ident, entity[i].scl);
 			model = mat_rot(model, entity[i].rot.e[0],
@@ -196,7 +225,7 @@ void processInput(GLFWwindow *window)
 	const float cam_speed = 2.5f;
 	const float cam_displacement = dtime * cam_speed;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cam_pos = vec_add(cam_pos, vec_scale(cam_front, cam_displacement));
+		cam_pos = vec_add(cam_pos, vec_scale(/*(vec3){{*/cam_front/*.e[0], cam_front.e[1], 0.0f}}*/, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 		cam_pos = vec_sub(cam_pos, vec_scale(cam_front, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
@@ -205,4 +234,7 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		cam_pos = vec_sub(cam_pos, vec_scale(
 			vec_norm(vec_cross(cam_front, cam_up)), cam_displacement));
+
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+		runphysics(dtime);
 }
