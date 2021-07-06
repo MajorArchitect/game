@@ -1,16 +1,19 @@
-# Game Engine
-This is a game engine written in C with OpenGL. I intend to cover at least the
-most essential features of a game engine, and then use it challenge myself and
-write a game. I hope it will be intuitive and basic enough to get your head
-around easily, but also be powerful enough to make a real game with.
+# Game
+This is a game written in C with OpenGL. I think it will be a clone of Wurm
+Online.
 
 ## Features
 ### Current
 - Ability to load multiple entities and display them (and remove them).
 - Folder format for storing meshes and textures of a model together, and the
 	appropriate functions for dealing with these.
+- Basic physics.
 
 ### Planned
+- Terraforming!
+- Crafting!
+- Combat!
+- Magic!
 - As cross-platform as possible! It currently only works on Linux (maybe just
 	my version of Ubuntu!) But any decision I will make about adding
 	external stuff will be made with consideration of how easy it will be
@@ -19,19 +22,10 @@ around easily, but also be powerful enough to make a real game with.
 	during runtime and has special properties like being able to reduce
 	mesh resolution of far-away parts of it, etc.
 - Ability to apply affects to objects such as colour and fade via GL shaders.
-- A basic multiplayer protocol.
+- A multiplayer protocol.
 
 ## How to use
-At the moment, the repository itself is a test program. I have not separated
-the test file ```main.c``` from the rest of the engine code yet, so you can
-edit that file and change what happens when the project is built and run. To
-build, just run ```build.sh``` to create an executable in ```bin/game``` (or
-run ```build-g.sh``` to create an executable fit for ```gdb``` debugging
-in ```bin/game-g```). The executable in the repository already contains the
-test program from ```main.c```, so you can run that without compiling as soon
-as you download the repository.  
-The script ```build.sh``` clears the screen then compiles all the *.c files
-with any linker statements that might be needed for X11 and OpenGL, etc. If
-you add another file to the project, it must be added to this script to not
-have linker errors. I will replace this with a Makefile once I figure out how
-they work.
+The binary in ```bin/game``` is the result of compiling the game with all the
+code seen in ```src/``` on my machine. ```bin/game-g``` might also contain a
+version of the game compiled to be compatible with GDB debugging, and it can be
+remade by running ```make -f makefile-g```.
