@@ -6,12 +6,12 @@ ODIR=src/obj
 LDIR =../lib
 
 LIBS=-lglfw3 -lGL -lm -ldl -lXinerama -lXrandr -lXi -lXcursor -lX11 -lXxf86vm \
--lpthread src/glad.c
+-lpthread src/glad.c 
 
 _DEPS = globals.h entity.h matvec.h shader.h physics.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o entity.o matvec.o shader.o physics.o
+_OBJ = main.o entity.o matvec.o shader.o physics.o world.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 

@@ -11,8 +11,12 @@
 #include "matvec.h"
 #include "entity.h"
 #include "physics.h"
+#include "world.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+#define W_WIDTH 600
+#define W_HEIGHT 400
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -44,7 +48,7 @@ int main()
 
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-	GLFWwindow *window = glfwCreateWindow(320, 240, "Game",
+	GLFWwindow *window = glfwCreateWindow(W_WIDTH, W_HEIGHT, "Game",
 		NULL, NULL);
 	if (window == NULL) {
 		printf("Could not create window\n");
@@ -57,14 +61,14 @@ int main()
 		printf("Failed to initialise GLAD\n");
 		return -1;
 	}
-	glViewport(0, 0, 320, 240);
+	glViewport(0, 0, W_WIDTH, W_HEIGHT);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetWindowAspectRatio(window, 4, 3);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
 
-	unsigned int shaderprog = mkshader("res/vert.vs", "res/frag.fs");
+	unsigned int shaderprog = mkshader("res/shad/vert.vs", "res/shad/frag.fs");
 	if (shaderprog == 0) {
 		printf("ERROR: mkshader returned zero.\n");
 		exit(100);
@@ -77,11 +81,13 @@ int main()
 	glUniform1i(glGetUniformLocation(shaderprog, "tex_sam1"), 0);
 
 
+	loadmod("res/mod/axes.mod", newentity("name", 0, 0));
+
 	vec3 rotaxis = {{1.0f, 0.0f, 0.0f}};
 	mat4 ident = mat_ident(1.0f);
 	mat4 model = mat_rot(ident, 0.0f, rotaxis);
 	mat4 view = ident;
-	mat4 proj = mat_proj(ident, 320.0f / 240.0f, 1.57, 0.1f, 1000.0f);
+	mat4 proj = mat_proj(ident, (float)W_WIDTH / (float)W_HEIGHT, 1.57, 0.1f, 1000.0f);
 
 	unsigned int model_loc = glGetUniformLocation(shaderprog, "model");
 	glUniformMatrix4fv(model_loc, 1, GL_TRUE, (float *)model.e);
@@ -90,43 +96,8 @@ int main()
 	unsigned int proj_loc = glGetUniformLocation(shaderprog, "proj");
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
-	int worldid = newentity("world", 0, 0);
-	loadmod("res/mod/world.mod", worldid);
-
-	int axeid = newentity("axe", 0, 0);
-	loadmod("res/mod/axes.mod", axeid);
-	int cubeid = newentity("cube", 0, 0);
-	loadmod("res/mod/cube.mod", cubeid);
-
-	int vel1id = newentity("1ms", 0, 0);
-	loadmod("res/mod/1ms.mod", vel1id);
-	int vel2id = newentity("2ms", 0, 0);
-	loadmod("res/mod/2ms.mod", vel2id);
-	int acc05id = newentity("0.5mss", 0, 0);
-	loadmod("res/mod/05mss.mod", acc05id);
-	int acc1id = newentity("1mss", 0, 0);
-	loadmod("res/mod/1mss.mod", acc1id);
-
-	entity[cubeid - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[cubeid - 1].pos = (vec3){{2.0f, 3.0f, 4.0f}};
-
-	entity[vel1id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[vel1id - 1].pos = (vec3){{3.0f, 3.0f, 1.0f}};
-	entity[vel1id - 1].vel = (vec3){{1.0f, 0.0f, 0.0f}};
-
-	entity[vel2id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[vel2id - 1].pos = (vec3){{3.0f, 2.0f, 1.0f}};
-	entity[vel2id - 1].vel = (vec3){{2.0f, 0.0f, 0.0f}};
-
-	entity[acc05id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[acc05id - 1].pos = (vec3){{3.0f, 4.0f, 1.0f}};
-	entity[acc05id - 1].acc = (vec3){{0.5f, 0.0f, 0.0f}};
-
-	entity[acc1id - 1].scl = (vec3){{0.5f, 0.5f, 0.5f}};
-	entity[acc1id - 1].pos = (vec3){{3.0f, 5.0f, 1.0f}};
-	entity[acc1id - 1].acc = (vec3){{1.0f, 0.0f, 0.0f}};
-
 	//game loop
+	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	while (!glfwWindowShouldClose(window)) {
 		ctime = glfwGetTime();
 		dtime = ctime - ptime;
@@ -137,11 +108,14 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		glUseProgram(shaderprog);
+
 
 		view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
 		glUniformMatrix4fv(view_loc, 1, GL_TRUE, (float *)view.e);
 
+		drawworld(view, proj);
+
+		glUseProgram(shaderprog);
 		for (int i = 0; i < entity_c; i++) {
 			glBindVertexArray(entity[i].vao);
 			model = mat_scale(ident, entity[i].scl);
@@ -163,19 +137,17 @@ int main()
 				GL_UNSIGNED_INT, 0);
 		}
 
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
-	//Nasty hack here to clear memory at end of program
-	glDeleteVertexArrays(1, &entity[0].vao);
-	glDeleteBuffers(1, &entity[0].vbo);
-	glDeleteBuffers(1, &entity[0].ebo);
 	glDeleteProgram(shaderprog);
+	freeworld();
 
 	glfwTerminate();
 	return 0;
 }
+
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -222,10 +194,14 @@ void processInput(GLFWwindow *window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, 1);
-	const float cam_speed = 2.5f;
+	float cam_speed = 1.5f; //Brisk walking speed of 1.5m/s
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		cam_speed = 100.0f;
 	const float cam_displacement = dtime * cam_speed;
+	vec2 dir2d = vec2_norm((vec2){{cam_front.e[0], cam_front.e[1]}});
+
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cam_pos = vec_add(cam_pos, vec_scale(/*(vec3){{*/cam_front/*.e[0], cam_front.e[1], 0.0f}}*/, cam_displacement));
+		cam_pos = vec_add(cam_pos, vec_scale((vec3){{dir2d.e[0], dir2d.e[1], 0.0f}}, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 		cam_pos = vec_sub(cam_pos, vec_scale(cam_front, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
@@ -237,4 +213,5 @@ void processInput(GLFWwindow *window)
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		runphysics(dtime);
+	cam_pos.e[2] = terrainheight((vec2){{cam_pos.e[0], cam_pos.e[1]}})+1.5f;
 }
