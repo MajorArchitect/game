@@ -28,6 +28,15 @@ vec3 vec_norm(vec3 v)
 	return o;
 }
 
+vec2 vec2_norm(vec2 v)
+{
+	vec2 o = v;
+	float x2 = o.e[0] * o.e[0], y2 = o.e[1] * o.e[1];
+	float l = sqrt(x2 + y2);
+	o.e[0] /= l, o.e[1] /= l;
+	return o;
+}
+
 vec3 vec_cross(vec3 a, vec3 b)
 {
 	vec3 c;
