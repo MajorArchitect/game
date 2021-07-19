@@ -1,4 +1,5 @@
 #include "world.h"
+#include "stb_image.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,12 +10,20 @@
 
 #include "shader.h"
 
+//GLOBAL VARIABLE DECLARATIONS
 short c_height[256][256] = {{0}, {0, 20, 20, 20, 20, 0},
 	{0, 20, 40, 40, 20, 0}, {0, 20, 40, 40, 20, 0}, {0, 20, 20, 20, 20, 0}};
 //256 tiles is the render distance for now, but this should be
 //made into a #define.
 vec3 c_vec[256][256];
 vec3 t_vec[256][256];
+
+struct vbo_vert {
+	vec3 vert;
+	unsigned char texref;
+};
+
+unsigned int grass_tex = 0;
 
 unsigned int world_vbo = 0, world_vao = 0, world_shader = 0;
 
@@ -56,66 +65,39 @@ void makeworld()
 			/ 4.0f);
 		}
 	}
-	//Assembling the triangle strips
-	vec3 tri_strip[256][1792];
-	for (int i = 0; i < 256; i++) {
-		for (int j = 0; j < 128; j++) {
-			int up1, down1;
-			if (i == 0)
-				up1 = 0;
-			else
-				up1 = i - 1;
-			if (i == 255)
-				down1 = 255;
-			else
-				down1 = i + 1;
-			int two_j = 2 * j, two_jp1, two_jp2;
-			two_jp1 = two_j + 1;
-			two_jp2 = two_jp1 + 1;
-			if (two_j == 254) {
-				two_jp2 = two_jp1;
-			}
+	//Assembling the triangle fans
+	struct vbo_vert tri_fan[256][1536] = {0};
+	for (int i = 0; i < 255; i++) {
+		for (int j = 0; j < 255; j++) {
+			int down1, right1;
 
 
-			int j_14 = (j * 14);
+			int j_6 = (j * 6);
 
-			tri_strip[i][j_14 + 0]  =
-				c_vec[up1][two_j];
-			tri_strip[i][j_14 + 1]  =
-				c_vec[i][two_j];
-			tri_strip[i][j_14 + 2]  =
-				t_vec[up1][two_j];
-			tri_strip[i][j_14 + 3]  =
-				c_vec[i][two_j +1];
-			tri_strip[i][j_14 + 4]  =
-				c_vec[i][two_j];
-			tri_strip[i][j_14 + 5]  =
-				t_vec[i][two_j];
-			tri_strip[i][j_14 + 6]  =
-				c_vec[i][two_jp1];
-			tri_strip[i][j_14 + 7]  =
-				c_vec[down1][two_jp1];
-			tri_strip[i][j_14 + 8]  =
-				c_vec[i][two_jp1];
-			tri_strip[i][j_14 + 9]  =
-				t_vec[i][two_jp1];
-			tri_strip[i][j_14 + 10] =
-				c_vec[i][two_jp2];
-			tri_strip[i][j_14 + 11] =
-				c_vec[i][two_jp1];
-			tri_strip[i][j_14 + 12] =
-				t_vec[up1][two_jp1];
-			tri_strip[i][j_14 + 13] =
-				c_vec[i][two_jp2];
+			tri_fan[i][j_6 + 0]  =
+				(struct vbo_vert){t_vec[i][j], 0};
+			tri_fan[i][j_6 + 1]  =
+				(struct vbo_vert){c_vec[i][j], 1};
+			tri_fan[i][j_6 + 2]  =
+				(struct vbo_vert){c_vec[i + 1][j], 2};
+			tri_fan[i][j_6 + 3]  =
+				(struct vbo_vert){c_vec[i + 1][j + 1], 3};
+			tri_fan[i][j_6 + 4]  =
+				(struct vbo_vert){c_vec[i][j + 1], 4};
+			tri_fan[i][j_6 + 5]  =
+				(struct vbo_vert){c_vec[i][j], 1};
 		}
 	}
 
 	//Put the strip in the GL
-	glBufferData(GL_ARRAY_BUFFER, 1792 * 256 * sizeof(vec3),
-		tri_strip, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 1536 * 256 * (sizeof(struct vbo_vert)),
+		tri_fan, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-		3 * sizeof(float), (void *)0);
+		sizeof(struct vbo_vert), (void *)0);
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 1, GL_UNSIGNED_BYTE, GL_FALSE,
+		sizeof(struct vbo_vert), (void *)(sizeof(vec3)));
+	glEnableVertexAttribArray(1);
 
 	//Make the shader
 	world_shader = mkshader("res/shad/w_vert.vs",
@@ -124,6 +106,36 @@ void makeworld()
 		printf("Couldn't make world shader, exiting.\n");
 		exit(1);
 	}
+	//Add the texture
+	glGenTextures(1, &grass_tex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, grass_tex);
+	//Set its parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//Read the file
+	int tex_width, tex_height, tex_chans;
+	stbi_set_flip_vertically_on_load(1);
+	//fileread function
+	unsigned char *data = stbi_load("res/tex/test.png", &tex_width, &tex_height,
+		&tex_chans, 0);
+	if (data == NULL) {
+		printf("image data is NULL\n");
+		//return -2;
+	}
+	//Set its data, depending on the depth of the pixels
+	if (tex_chans == 3)
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0,
+		GL_RGB, GL_UNSIGNED_BYTE, data);
+	else
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_width, tex_height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(data);
+	glUniform1i(glGetUniformLocation(world_shader, "tex_sam1"), 0);
+
 	glBindVertexArray(0);
 }
 
@@ -137,6 +149,8 @@ void drawworld(mat4 view, mat4 proj)
 	//Bind and use
 	glBindVertexArray(world_vao);
 	glUseProgram(world_shader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, grass_tex);
 
 	mat4 model = mat_ident(1.0f);
 
@@ -148,7 +162,9 @@ void drawworld(mat4 view, mat4 proj)
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
 	for (int i = 0; i < 256; i++) {
-		glDrawArrays(GL_TRIANGLE_STRIP, i * 1792, 1792);
+		for (int j = 0; j < 256; j++) {
+			glDrawArrays(GL_TRIANGLE_FAN, (j * 1536) + i * 6, 6);
+		}
 	}
 
 	glBindVertexArray(0);

@@ -107,9 +107,6 @@ int main()
 		glClearColor(0.529f, 0.808f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-
-
 		view = mat_lookat(ident, cam_pos, vec_add(cam_pos, cam_front), (vec3){{0.0f, 0.0f, 1.0f}});
 		glUniformMatrix4fv(view_loc, 1, GL_TRUE, (float *)view.e);
 
@@ -203,13 +200,13 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		cam_pos = vec_add(cam_pos, vec_scale((vec3){{dir2d.e[0], dir2d.e[1], 0.0f}}, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		cam_pos = vec_sub(cam_pos, vec_scale(cam_front, cam_displacement));
+		cam_pos = vec_sub(cam_pos, vec_scale((vec3){{dir2d.e[0], dir2d.e[1], 0.0f}}, cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		cam_pos = vec_add(cam_pos, vec_scale(
-			vec_norm(vec_cross(cam_front, cam_up)), cam_displacement));
+			vec_norm(vec_cross((vec3){{dir2d.e[0], dir2d.e[1], 0.0f}}, cam_up)), cam_displacement));
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		cam_pos = vec_sub(cam_pos, vec_scale(
-			vec_norm(vec_cross(cam_front, cam_up)), cam_displacement));
+			vec_norm(vec_cross((vec3){{dir2d.e[0], dir2d.e[1], 0.0f}}, cam_up)), cam_displacement));
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		runphysics(dtime);
