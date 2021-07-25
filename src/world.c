@@ -95,7 +95,7 @@ void makeworld()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
 		sizeof(struct vbo_vert), (void *)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 1, GL_UNSIGNED_BYTE, GL_FALSE,
+	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, 
 		sizeof(struct vbo_vert), (void *)(sizeof(vec3)));
 	glEnableVertexAttribArray(1);
 
