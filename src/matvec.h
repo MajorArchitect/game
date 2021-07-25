@@ -62,10 +62,11 @@ struct s_vertex {
 typedef struct s_vertex vertex;
 
 
-vec3 vec_add(vec3 a, vec3 b);
-vec3 vec_sub(vec3 a, vec3 b);
-vec3 vec_scale(vec3 v, float s);
+vec3 vec_add(vec3 a, vec3 b); vec2 vec2_add(vec2 a, vec2 b);
+vec3 vec_sub(vec3 a, vec3 b); vec2 vec2_sub(vec2 a, vec2 b);
+vec3 vec_scale(vec3 v, float s); vec2 vec2_scale(vec2 v, float s);
 vec3 vec_norm(vec3 v); vec2 vec2_norm(vec2 v);
+float vec_dot(vec3 a, vec3 b); float vec2_dot(vec2 a, vec2 b);
 vec3 vec_cross(vec3 a, vec3 b);
 
 mat4 mat_ident(float s);

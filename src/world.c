@@ -11,8 +11,16 @@
 #include "shader.h"
 
 //GLOBAL VARIABLE DECLARATIONS
-short c_height[256][256] = {{0}, {0, 20, 20, 20, 20, 0},
+short heightmap[256][256] = {{0}, {0, 20, 20, 20, 20, 0},
 	{0, 20, 40, 40, 20, 0}, {0, 20, 40, 40, 20, 0}, {0, 20, 20, 20, 20, 0}};
+
+struct s_tiledat {
+	char type;
+};
+struct s_tiledat tiledat[256][256] = {{{1}, {1}, {1}, {1}},
+	{{1}, {2}, {2}, {1}}, {{1}, {2}, {2}, {1}}, {{1}, {1}, {1}, {1}}};
+
+
 //256 tiles is the render distance for now, but this should be
 //made into a #define.
 vec3 c_vec[256][256];
@@ -21,20 +29,23 @@ vec3 t_vec[256][256];
 struct vbo_vert {
 	vec3 vert;
 	unsigned char texref;
+	char tiletype;
 };
 
 unsigned int grass_tex = 0;
 
 unsigned int world_vbo = 0, world_vao = 0, world_shader = 0;
 
+
+
 void makeworld()
 {
-
-	/*for (int i = 0; i < 256; i++) {
+	for (int i = 0; i < 256; i++) {
 		for (int j = 0; j < 256; j++) {
-			c_height[i][j] = rand() % 15;
+			heightmap[i][j] =  (int)(400.0f *
+				perlin((vec2){{(float)j*4.0f-512.0f, (float)i*4.0f-512.0f}}));
 		}
-	}*/
+	}
 
 	//Make the buffers exist.
 	glGenVertexArrays(1, &world_vao);
@@ -52,7 +63,7 @@ void makeworld()
 			 * height of all its corners. */
 			c_vec[i][j].e[0] = (float)((j - 128) * 4);
 			c_vec[i][j].e[1] = (float)((i - 128) * 4);
-			c_vec[i][j].e[2] = (float)(c_height[i][j] * 0.1f);
+			c_vec[i][j].e[2] = (float)(heightmap[i][j] * 0.1f);
 		}
 	}
 	for (int i = 0; i < 256; i++) {
@@ -75,17 +86,23 @@ void makeworld()
 			int j_6 = (j * 6);
 
 			tri_fan[i][j_6 + 0]  =
-				(struct vbo_vert){t_vec[i][j], 0};
+				(struct vbo_vert){t_vec[i][j], 0,
+					tiledat[i][j].type};
 			tri_fan[i][j_6 + 1]  =
-				(struct vbo_vert){c_vec[i][j], 1};
+				(struct vbo_vert){c_vec[i][j], 1,
+					tiledat[i][j].type};
 			tri_fan[i][j_6 + 2]  =
-				(struct vbo_vert){c_vec[i + 1][j], 2};
+				(struct vbo_vert){c_vec[i + 1][j], 2,
+					tiledat[i][j].type};
 			tri_fan[i][j_6 + 3]  =
-				(struct vbo_vert){c_vec[i + 1][j + 1], 3};
+				(struct vbo_vert){c_vec[i + 1][j + 1], 3,
+					tiledat[i][j].type};
 			tri_fan[i][j_6 + 4]  =
-				(struct vbo_vert){c_vec[i][j + 1], 4};
+				(struct vbo_vert){c_vec[i][j + 1], 4,
+					tiledat[i][j].type};
 			tri_fan[i][j_6 + 5]  =
-				(struct vbo_vert){c_vec[i][j], 1};
+				(struct vbo_vert){c_vec[i][j], 1,
+					tiledat[i][j].type};
 		}
 	}
 
@@ -95,9 +112,12 @@ void makeworld()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
 		sizeof(struct vbo_vert), (void *)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, 
+	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE,
 		sizeof(struct vbo_vert), (void *)(sizeof(vec3)));
 	glEnableVertexAttribArray(1);
+	glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE,
+		sizeof(struct vbo_vert), (void *)(sizeof(vec3)) + sizeof(char));
+	glEnableVertexAttribArray(2);
 
 	//Make the shader
 	world_shader = mkshader("res/shad/w_vert.vs",
@@ -119,7 +139,7 @@ void makeworld()
 	int tex_width, tex_height, tex_chans;
 	stbi_set_flip_vertically_on_load(1);
 	//fileread function
-	unsigned char *data = stbi_load("res/tex/test.png", &tex_width, &tex_height,
+	unsigned char *data = stbi_load("res/tex/tiles.png", &tex_width, &tex_height,
 		&tex_chans, 0);
 	if (data == NULL) {
 		printf("image data is NULL\n");
@@ -171,6 +191,63 @@ void drawworld(mat4 view, mat4 proj)
 	return;
 
 }
+
+vec2 gradvec[5][5] = {0};
+float perlin(vec2 coords)
+{
+	//Normalise the world co-ordinates to 0.0 -> 4.0
+	vec2 sclcoords = vec2_scale(coords, 1.0f / 256.0f);
+	sclcoords = vec2_add(sclcoords, (vec2){{2.0f, 2.0f}});
+
+	//Determine which cell coords are in
+	int cellx = (int)floorf(sclcoords.e[0]);
+	int celly = (int)floorf(sclcoords.e[1]);
+	float cellxf = (float)cellx;
+	float cellyf = (float)celly;
+
+	//Find the offset vectors
+	vec2 offvec[2][2];
+	offvec[0][0] = vec2_sub((vec2){{cellxf, cellyf}}, sclcoords);
+	offvec[1][0] = vec2_sub((vec2){{cellxf+1.0f, cellyf}}, sclcoords);
+	offvec[0][1] = vec2_sub((vec2){{cellxf, cellyf+1.0f}}, sclcoords);
+	offvec[1][1] = vec2_sub((vec2){{cellxf+1.0f, cellyf+1.0f}}, sclcoords);
+
+	//Get dot products between offset vectors and gradient vectors
+	float dotprod[2][2];
+	dotprod[0][0] = vec2_dot(offvec[0][0], gradvec[celly][cellx]);
+	dotprod[1][0] = vec2_dot(offvec[1][0], gradvec[celly+1][cellx]);
+	dotprod[0][1] = vec2_dot(offvec[0][1], gradvec[celly][cellx=1]);
+	dotprod[1][1] = vec2_dot(offvec[1][1], gradvec[celly+1][cellx+1]);
+
+	//bilerp all the dot products to the point
+	float lerp1[2];
+	lerp1[0] = dotprod[0][0] + (sclcoords.e[0] - cellxf)
+		* (dotprod[0][1] - dotprod[0][0]);
+	lerp1[0] = dotprod[1][0] + (sclcoords.e[0] - cellxf)
+		* (dotprod[1][1] - dotprod[1][0]);
+
+	float lerp2 = lerp1[0] + (sclcoords.e[1] - cellyf)
+		* (lerp1[1] - lerp1[0]);
+
+	//return the bilerp.
+	return lerp2;
+}
+
+void seedperlin(unsigned int seed)
+{
+	srand(seed);
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			float angle = (float)rand()/(float)(RAND_MAX/ (2.0f * 3.14159));
+			mat4 rot = mat_rot(mat_ident(1.0f), angle,
+				(vec3){{0.0f, 0.0f, 1.0f}});
+			vec4 bigvec = matvecprod(rot,
+				(vec4){{1.0f, 0.0f, 0.0f, 1.0f}});
+			gradvec[i][j] = (vec2){{bigvec.e[0], bigvec.e[1]}};
+		}
+	}
+}
+
 
 void freeworld()
 {

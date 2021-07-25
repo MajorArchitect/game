@@ -8,15 +8,27 @@ vec3 vec_add(vec3 a, vec3 b)
 {
 	return (vec3){{a.e[0] + b.e[0], a.e[1] + b.e[1], a.e[2] + b.e[2]}};
 }
+vec2 vec2_add(vec2 a, vec2 b)
+{
+	return (vec2){{a.e[0] + b.e[0], a.e[1] + b.e[1]}};
+}
 
 vec3 vec_sub(vec3 a, vec3 b)
 {
 	return (vec3){{a.e[0] - b.e[0], a.e[1] - b.e[1], a.e[2] - b.e[2]}};
 }
+vec2 vec2_sub(vec2 a, vec2 b)
+{
+	return (vec2){{a.e[0] - b.e[0], a.e[1] - b.e[1]}};
+}
 
 vec3 vec_scale(vec3 v, float s)
 {
 	return (vec3){{v.e[0] * s, v.e[1] * s, v.e[2] * s}};
+}
+vec2 vec2_scale(vec2 v, float s)
+{
+	return (vec2){{v.e[0] * s, v.e[1] * s}};
 }
 
 vec3 vec_norm(vec3 v)
@@ -27,7 +39,6 @@ vec3 vec_norm(vec3 v)
 	o.e[0] /= l, o.e[1] /= l, o.e[2] /= l;
 	return o;
 }
-
 vec2 vec2_norm(vec2 v)
 {
 	vec2 o = v;
@@ -36,6 +47,16 @@ vec2 vec2_norm(vec2 v)
 	o.e[0] /= l, o.e[1] /= l;
 	return o;
 }
+
+float vec_dot(vec3 a, vec3 b)
+{
+	return a.e[0] * b.e[0] + a.e[1] * b.e[1] + a.e[2] * b.e[2];
+}
+float vec2_dot(vec2 a, vec2 b)
+{
+	return a.e[0] * b.e[0] + a.e[1] * b.e[1];
+}
+
 
 vec3 vec_cross(vec3 a, vec3 b)
 {

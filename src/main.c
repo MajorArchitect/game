@@ -81,7 +81,7 @@ int main()
 	glUniform1i(glGetUniformLocation(shaderprog, "tex_sam1"), 0);
 
 
-	loadmod("res/mod/axes.mod", newentity("name", 0, 0));
+	loadmod("res/mod/axes.mod", newentity("axes", 0, 0));
 
 	vec3 rotaxis = {{1.0f, 0.0f, 0.0f}};
 	mat4 ident = mat_ident(1.0f);
@@ -96,8 +96,9 @@ int main()
 	unsigned int proj_loc = glGetUniformLocation(shaderprog, "proj");
 	glUniformMatrix4fv(proj_loc, 1, GL_TRUE, (float *)proj.e);
 
+	seedperlin(1337);
+
 	//game loop
-	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	while (!glfwWindowShouldClose(window)) {
 		ctime = glfwGetTime();
 		dtime = ctime - ptime;
@@ -210,5 +211,11 @@ void processInput(GLFWwindow *window)
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		runphysics(dtime);
+
+	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 	cam_pos.e[2] = terrainheight((vec2){{cam_pos.e[0], cam_pos.e[1]}})+1.5f;
 }
